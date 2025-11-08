@@ -1,10 +1,119 @@
-all: compile link
+# Compiler dan flags
+CXX = g++
+CXXFLAGS = -c -I"C:\SFML-3.0.2\include" -DSFML_STATIC -std=c++17
+LDFLAGS = -L"C:\SFML-3.0.2\lib" -lsfml-graphics-s -lsfml-window-s -lsfml-system-s -lopengl32 -lfreetype -lwinmm -lgdi32 -lsfml-main
+TARGET = billiard_game.exe
 
-compile:
-	g++ -c main.cpp -I"C:\SFML-3.0.2\include" -DSFML_STATIC
+# Semua file .cpp
+SOURCES = main.cpp Ball.cpp Table.cpp Cue.cpp BilliardGame.cpp Physics.cpp
 
-link:
-	g++ main.o -o main -L"C:\SFML-3.0.2\lib" -lsfml-graphics-s -lsfml-window-s -lsfml-system-s -lopengl32 -lfreetype -lwinmm -lgdi32 -mwindows -lsfml-main
+# Object files (.o dari .cpp)
+OBJECTS = $(SOURCES:.cpp=.o)
 
+# =============================================
+# Target utama
+# =============================================
+
+all: $(TARGET)
+	@echo ============================================
+	@echo Build berhasil! Jalankan: ./$(TARGET)
+	@echo ============================================
+
+# Linking semua object files jadi executable
+$(TARGET): $(OBJECTS)
+	@echo [LINKING] Menggabungkan semua file...
+	$(CXX) $(OBJECTS) -o $(TARGET) $(LDFLAGS)
+
+# Compile setiap .cpp jadi .o
+%.o: %.cpp
+	@echo [COMPILE] $<
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+# =============================================
+# Target untuk development
+# =============================================
+
+# Compile ulang dari awal (clean + build)
+rebuild: clean all
+
+# Jalankan program setelah compile
+run: all
+	@echo [RUN] Menjalankan game...
+	./$(TARGET)
+
+# Hapus semua file hasil compile
 clean:
-	del /Q main.exe main.o 2>nul || true
+	@echo [CLEAN] Menghapus file temporary...
+	@del /Q $(TARGET) $(OBJECTS) 2>nul || echo "Sudah bersih!"
+
+# Cek dependencies (file mana yang berubah)
+check:
+	@echo ============================================
+	@echo Source Files:
+	@echo $(SOURCES)
+	@echo.
+	@echo Object Files:
+	@echo $(OBJECTS)
+	@echo.
+	@echo Target:
+	@echo $(TARGET)
+	@echo ============================================
+
+# =============================================
+# Dependencies (kalau header berubah, recompile)
+# =============================================
+
+main.o: main.cpp BilliardGame.h
+BilliardGame.o: BilliardGame.cpp BilliardGame.h Ball.h Table.h Cue.h Physics.h
+Ball.o: Ball.cpp Ball.h Physics.h
+Table.o: Table.cpp Table.h
+Cue.o: Cue.cpp Cue.h Physics.h
+Physics.o: Physics.cpp Physics.h
+
+# =============================================
+# Target khusus per orang (untuk testing)
+# =============================================
+
+# Test compile bagian Nadine & Fathya (UI)
+test-ui:
+	@echo [TEST] Compile bagian UI...
+	$(CXX) $(CXXFLAGS) Table.cpp -o Table.o
+	$(CXX) $(CXXFLAGS) Ball.cpp -o Ball.o
+	$(CXX) $(CXXFLAGS) Cue.cpp -o Cue.o
+	@echo UI components OK!
+
+# Test compile bagian Devia (Physics)
+test-physics:
+	@echo [TEST] Compile bagian Physics...
+	$(CXX) $(CXXFLAGS) Physics.cpp -o Physics.o
+	$(CXX) $(CXXFLAGS) Ball.cpp -o Ball.o
+	@echo Physics components OK!
+
+# Test compile bagian Leader (Integration)
+test-game:
+	@echo [TEST] Compile bagian Game...
+	$(CXX) $(CXXFLAGS) BilliardGame.cpp -o BilliardGame.o
+	$(CXX) $(CXXFLAGS) main.cpp -o main.o
+	@echo Game components OK!
+
+# =============================================
+# Help menu
+# =============================================
+
+help:
+	@echo ============================================
+	@echo Makefile Commands untuk Billiard Game
+	@echo ============================================
+	@echo make all       - Compile semua file
+	@echo make run       - Compile dan jalankan game
+	@echo make clean     - Hapus file temporary
+	@echo make rebuild   - Clean + compile ulang
+	@echo make check     - Lihat file dependencies
+	@echo.
+	@echo === Testing per bagian ===
+	@echo make test-ui       - Test compile UI (Nadine/Fathya)
+	@echo make test-physics  - Test compile Physics (Devia)
+	@echo make test-game     - Test compile Game (Devia)
+	@echo ============================================
+
+.PHONY: all clean rebuild run check help test-ui test-physics test-game
